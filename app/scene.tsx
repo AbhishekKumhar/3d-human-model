@@ -17,18 +17,18 @@ export default function AnatomyScene({ atlas, state, onSelect, onProgress, onErr
     const abort = new AbortController();
     let renderer: T.WebGLRenderer;
     try { renderer = new T.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' }); } catch { onError('This browser could not start the 3D viewer. Please try a browser with WebGL enabled.'); return; }
-    renderer.setPixelRatio(Math.min(devicePixelRatio, innerWidth < 768 ? 1.5 : 2)); renderer.setClearColor('#f2f3f3'); renderer.outputColorSpace = T.SRGBColorSpace; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.12; el.appendChild(renderer.domElement);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, innerWidth < 768 ? 1.5 : 2)); renderer.setClearColor('#050D0F', 1); renderer.outputColorSpace = T.SRGBColorSpace; renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.12; el.appendChild(renderer.domElement);
     renderer.domElement.setAttribute('aria-label', 'Interactive human anatomy. Drag to orbit, pinch or scroll to zoom, and tap a structure to inspect it.');
     const scene = new T.Scene(), camera = new T.PerspectiveCamera(34, 1, .005, 100), controls = new OrbitControls(camera, renderer.domElement);
     camera.position.set(1.4, 1.05, 3.6); controls.target.set(0, .85, 0); controls.enableDamping = true; controls.dampingFactor = .085; controls.minDistance = .07; controls.maxDistance = 40; controls.maxPolarAngle = Math.PI * .96; controls.addEventListener('change', () => { dirty = true; });
     const pmrem = new T.PMREMGenerator(renderer), room = new RoomEnvironment(), env = pmrem.fromScene(room, .04); scene.environment = env.texture; room.dispose(); pmrem.dispose();
-    scene.add(new T.HemisphereLight(0xffffff, 0xa7acb2, 1.05));
+    scene.add(new T.HemisphereLight(0xffffff, 0x142028, 1.2));
     const key = new T.DirectionalLight(0xfffaf4, 2.3); key.position.set(-2, 4, 3); scene.add(key);
-    const rim = new T.DirectionalLight(0xe9f0ff, 1.8); rim.position.set(2, 2, -3); scene.add(rim);
-    const ground = new T.Mesh(new T.CircleGeometry(30, 96), new T.MeshStandardMaterial({ color: 0xd5d9dc, roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -.019; scene.add(ground);
-    const platform = new T.Mesh(new T.CylinderGeometry(.68, .7, .028, 100), new T.MeshStandardMaterial({ color: 0xeeeeec, metalness: .12, roughness: .67 })); platform.position.y = -.016; scene.add(platform);
-    const ring = new T.Mesh(new T.RingGeometry(.63, .632, 128), new T.MeshBasicMaterial({ color: 0x8c969f, transparent: true, opacity: .4, side: T.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.y = .001; scene.add(ring);
-    const innerRing = new T.Mesh(new T.RingGeometry(.55, .551, 128), new T.MeshBasicMaterial({ color: 0xa4aeb8, transparent: true, opacity: .16, side: T.DoubleSide })); innerRing.rotation.x = -Math.PI / 2; innerRing.position.y = .001; scene.add(innerRing);
+    const rim = new T.DirectionalLight(0x00c4d2, 1.8); rim.position.set(2, 2, -3); scene.add(rim);
+    const ground = new T.Mesh(new T.CircleGeometry(30, 96), new T.MeshStandardMaterial({ color: 0x050D0F, roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.position.y = -.019; scene.add(ground);
+    const platform = new T.Mesh(new T.CylinderGeometry(.68, .7, .028, 100), new T.MeshStandardMaterial({ color: 0x0c1518, metalness: .12, roughness: .67 })); platform.position.y = -.016; scene.add(platform);
+    const ring = new T.Mesh(new T.RingGeometry(.63, .632, 128), new T.MeshBasicMaterial({ color: 0x00c4d2, transparent: true, opacity: .2, side: T.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.y = .001; scene.add(ring);
+    const innerRing = new T.Mesh(new T.RingGeometry(.55, .551, 128), new T.MeshBasicMaterial({ color: 0x00c4d2, transparent: true, opacity: .1, side: T.DoubleSide })); innerRing.rotation.x = -Math.PI / 2; innerRing.position.y = .001; scene.add(innerRing);
     const width = T.MathUtils.ceilPowerOfTwo(atlas.parts.length), data = new Float32Array(width * 4), partTexture = new T.DataTexture(data, width, 1, T.RGBAFormat, T.FloatType); partTexture.needsUpdate = true;
     const selectedData = new Uint8Array(width * 4), selectionTexture = new T.DataTexture(selectedData, width, 1); selectionTexture.needsUpdate = true;
     const materials: T.Material[] = [], geometries: T.BufferGeometry[] = [], pickers: (T.Mesh | undefined)[] = [], centers = atlas.parts.map(p => new T.Vector3().fromArray(p.bounds[0]).add(new T.Vector3().fromArray(p.bounds[1])).multiplyScalar(.5));
@@ -54,7 +54,7 @@ export default function AnatomyScene({ atlas, state, onSelect, onProgress, onErr
         shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvec2 stateUv = vec2((partIndex + 0.5) / stateWidth, 0.5); vec4 state = texture2D(partState, stateUv); transformed += state.xyz; partVisible = state.w; partSelected = texture2D(selectionState, stateUv).r;');
         shader.fragmentShader = 'varying float partVisible; varying float partSelected;\n' + shader.fragmentShader;
         shader.fragmentShader = shader.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (partVisible < 0.5) discard;');
-        shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.85, 0.78), partSelected * 0.75);');
+        shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.0, 0.77, 0.82), partSelected * 0.85);');
       }; materials.push(m); return m;
     };
     const mats = new Map(SYSTEMS.map(s => [s.id, materialFor(s.id)]));
